@@ -1,0 +1,29 @@
+CLEAN THE SYSTEM
+docker system prune -a
+
+CREATE A BRIDGE TO SUPPORT COMMUNICATION
+docker network create kafka-net --driver bridge
+
+CREATE ZOOKEEPER IMAGE AND RUN
+docker run --name zookeeper-server -p 2181:2181 --network kafka-net -e ALLOW_ANONYMOUS_LOGIN=yes -d bitnami/zookeeper:latest
+JUST RUN
+docker run --name zookeeper-server -p 2181:2181 --network kafka-net -e ALLOW_ANONYMOUS_LOGIN=yes -d bitnami/zookeeper
+
+CREATE KAFKA IMAGE AND RUN
+docker run --name kafka-server --network kafka-net -e ALLOW_PLAINTEXT_LISTENER=yes -e KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper-server:2181 -e KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092 -p 9092:9092 -d bitnami/kafka:latest
+JUST RUN
+docker run --name kafka-server --network kafka-net -e ALLOW_PLAINTEXT_LISTENER=yes -e KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper-server:2181 -e KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092 -p 9092:9092 -d bitnami/kafka
+
+INSTALL CONDUKTOR ( NOT A COMMAND, JUST A TOOL )
+
+CREATE A TOPIC
+docker exec kafka-server /opt/bitnami/kafka/bin/kafka-topics.sh --create --zookeeper zookeeper-server:2181 --replication-factor 1 --partitions 1 --topic chat-topic
+
+LIST TOPICS
+docker exec kafka-server /opt/bitnami/kafka/bin/kafka-topics.sh --list --zookeeper  zookeeper-server:2181
+
+EXECUTE A PRODUCER
+docker exec kafka-server /opt/bitnami/kafka/bin/kafka-console-producer.sh --broker-list localhost:9092 --topic chat-topic
+
+EXECUTE A CONSUMER
+docker-compose exec kafka-server /opt/bitnami/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic chat-topic --from-beginning
